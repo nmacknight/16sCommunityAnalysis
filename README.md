@@ -1,2 +1,7 @@
 # 16sCommunityAnalysis
-Normalize, subset, permanova, diversity, visualize, simper, dysbiosis, heres how to conquer the world with your lil bacteria dataset. 
+Follow files in order 1-4.
+
+1.)Normalize & Subset
+2.)Community Analysis
+3.)SIMPER
+4.)Post SIMPER
