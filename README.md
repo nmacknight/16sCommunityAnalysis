@@ -7,4 +7,5 @@ Follow files in order 1-4.
 4.)Post SIMPER
 
 
-DOI: 10.5281/zenodo.4635319
+https://doi.org/10.5281/zenodo.4635319
+
