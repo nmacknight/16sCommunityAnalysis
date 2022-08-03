@@ -1,20 +1,16 @@
-# 16sCommunityAnalysis
+# 16s Microbiome Analysis
 Follow files in order 1-4.
 
-1.)Normalize & Subset
+Step 1 - Normalize & Subset
 
-2.)Community Analysis
+Step 2 - Main Analysis
 
-3.)SIMPER
+Step 3 - SIMPER
 
-4.)Post SIMPER
+Step 4 - Post SIMPER Analysis
 
-You can find the scripts here or go to the zenodo link. 
-
-To find the scripts here, go to branches, select the 4th Post simper directory and then within that, you will find the 1-4 scripts. I am learning github organization. 
-
-
-https://doi.org/10.5281/zenodo.4635319
+You can find the scripts here or go to the zenodo link. https://doi.org/10.5281/zenodo.4635319
 
 The publication this script was built for: https://www.nature.com/articles/s42003-021-02163-5
 
+If you have any questions, feel free to reach out: nicholas.macknight@noaa.gov, nicholas.macknight@gmail.com
