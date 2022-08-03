@@ -1,0 +1,282 @@
+setwd
+D=read.csv("D.reannotation_nolesion.csv",sep=",",header=TRUE)
+#use "colors()" to see list of R color names
+library(vegan)
+
+#Compare WP tissue v coral tissue
+#"Type" is a column name which categorizes the samples for comparative purposes
+adonis(D[,6:7230]~Infected, data=D, permutations=10000)
+pairwise.adonis(D[,6:7230],D$Infected)
+
+adonis(D[,6:7230]~Treatment, data=D, permutations=10000)
+
+adonis(D[,6:7230]~Type, data=D, permutations=10000)
+
+adonis(D[,6:7230]~species, data=D, permutations=10000)
+
+adonis(D[,6:7230]~Species*Infected, data=D, permutations=10000, by = "margin")
+
+adonis(D[,7:7230]~Tank, data=D, permutations=10000) #tank effect? no!
+
+pairwise.adonis(D[,7:7230],D$Tank)
+
+NMDS=metaMDS(D[,6:7230])#Run 20 stress 0.1548644 
+attach(NMDS)
+stressplot(NMDS)
+ordiplot(NMDS)
+#_____________________This is awesome code for making a detailed NMDS plot, dont mess with this, copy and then edit____________
+cols <- c("red1","seagreen", "darkseagreen", "red3", "cornflowerblue", "chartreuse","deepskyblue2")
+#cols <- as.character(D$Color) #attempting to assign a color to each species. failed, but helped write the line above^
+#pchs <- as.numeric(D$pchs) #attempting to assign a shape to each species. failed, but helped write the line below
+pchs=c(16,17,15,18)
+ordiplot(NMDS, display="sites")
+points(NMDS,col=cols[D$Species],pch=pchs[D$Infected],cex=1.5)
+ordiellipse(NMDS,groups=D$Species, label=T,lty=1,lwd=1,col=cols,draw = "lines",alpha=100)
+legend(x=1.1, y=1.1, legend=levels(D$Species), col=cols, pch =16) #x=0.63, y=0.7,
+legend(x=1.1, y=-0.15, legend=levels(D$Infected), col="black", pch = pchs) #box.lty=0 removes legen border
+
+-----------------Controls only: to compare microbiomes between species---------------------------
+D.c=read.csv("D.reannotation.controlsonly.csv",sep=",",header=TRUE)
+library(vegan)
+adonis(D.c[,6:7230]~Species, data=D.c, permutations=10000)
+'''Df SumsOfSqs MeanSqs F.Model      R2    Pr(>F)    
+Species    6    6.3874 1.06456  5.2955 0.54061 9.999e-05 ***
+Residuals 27    5.4279 0.20103         0.45939              
+Total     33   11.8152                 1.00000        '''
+
+NMDS=metaMDS(D.c[,6:7230])#Run 20 stress 0.1247077
+attach(NMDS)
+stressplot(NMDS)
+ordiplot(NMDS)
+#_____________________This is awesome code for making a detailed NMDS plot, dont mess with this, copy and then edit____________
+cols <- c("red4","cadetblue2", "chartreuse2", "red2", "chocolate3", "cornflowerblue","burlywood")
+#cols <- as.character(D$Color) #attempting to assign a color to each species. failed, but helped write the line above^
+#pchs <- as.numeric(D$pchs) #attempting to assign a shape to each species. failed, but helped write the line below
+pchs=c(16,16,16,16,16,16,16)
+ordiplot(NMDS, display="sites")
+points(NMDS,col=cols[D.c$Species],pch=pchs[D.c$Species],cex=1.5)
+ordiellipse(NMDS,groups=D.c$Species, label=T,lty=1,lwd=2)
+legend(x=0.63, y=0.7, legend=levels(D$Species), col=cols, pch =16)
+legend(x=0.6, y=-0.15, legend=levels(D$Infected), col="black", pch = pchs) #box.lty=0 removes legen border
+
+
+
+#Diversity indices
+# copy the output of H, J, simpson, and invsimpson to a new excel file for later use. Label the columns J, H, simpson, invsimpson, respectively. 
+
+H=diversity(D[,6:7230])
+View(H)
+#Pielous Evenness
+
+J=H/log(specnumber(D[,6:7230]))
+View(J)
+simpson <- diversity(D[,6:7230], index="simpson")
+View(simpson)
+invsimpson <- diversity(D[,6:7230], index="invsimpson")
+View(invsimpson)
+##Make a file called "E.diversity" with four columns "H,J,simpson, invsimpson" and enter the output from the above code into those columns to complete "E.diversity"
+D.diversity <- read.csv("D.diversity_nolesion.csv",sep=",",header=TRUE)
+#Testing for normality. A pvalue <0.05 means signficant deviation from normal data. ie. its not normally distributed data.
+shapiro.test(D.diversity$H)#W = ##, p-value = ##
+shapiro.test(D.diversity$J)#W = ##, p-value = ##
+shapiro.test(D.diversity$S)#W = ##, p-value = ##
+shapiro.test(D.diversity$IS)#W = ##, p-value = ##
+shapiro.test(D.diversity$B)#W = ##, p-value = ##
+
+#insert descriptive columns (species, treatment, type)
+kruskal.test(H~Treatment,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(J~Treatment,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(S~Treatment,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(IS~Treatment,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(B~Treatment,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+
+kruskal.test(H~Species,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(J~Species,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(S~Species,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(IS~Species,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(B~Species,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+
+kruskal.test(H~Type,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(J~Type,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(S~Type,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(IS~Type,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(B~Type,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+
+kruskal.test(H~Infected,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(J~Infected,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(S~Infected,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(IS~Infected,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(B~Infected,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+
+kruskal.test(H~Group,data=D.diversity) #Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(J~Group,data=D.diversity) #Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(S~Group,data=D.diversity) #Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(IS~Group,data=D.diversity)#Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+kruskal.test(B~Group,data=D.diversity) #Kruskal-Wallis chi-squared = ###, df = #, p-value = ####
+
+#beta diversity by Site by abundance data (could try by presence or absence)
+
+install.packages("betapart")
+library(betapart)
+
+dist<-bray.part(D[,6:7230])
+bd<-betadisper(dist[[3]],D$Infected)
+bd
+
+boxplot(bd)
+anova(bd)
+class(bd)
+bd$distances
+
+TukeyHSD(bd)
+
+tukey.lm <- lm(H ~ Species, data = D.diversity)
+tukey.av <- aov(tukey.lm)
+summary(tukey.av)
+
+tukey.test <- TukeyHSD(tukey.av)
+tukey.test
+#gamma diversity. uncertain how to interpret results
+data(dune)
+data(dune.env)
+D.env <- D[c(1:5)]
+D.D <- D[c(6:7230)]
+alpha <- with(D.env, tapply(specnumber(D.D), Type, mean))
+gamma <- with(D.env, specnumber(D.D, Type)) #finds number of bacterial species. 
+alpha
+gamma
+gamma/alpha -1 #beta
+install.packages("vegetarian")
+library(vegetarian)
+D.matrix <- as.matrix(D)
+d(D.matrix[,-5],lev="gamma",q=0)
+class(D.matrix)
+D.matrix[,-5]
+
+#rarefaction
+library(vegan)
+D.spec <- specnumber(D[,6:7230])
+D.specrare <- min(rowSums(D[,6:7230]))
+Srare <- rarefy(D[,6:7230], D.specrare)
+plot(D.spec,Srare, xlab = "Observed No. of Species", ylab="Rarefied No. of Species")
+abline(0,1)
+rarecurve(D[,6:7230], step = 20, sample=D.specrare, col = c("darkseagreen","cornflowerblue", "darksalmon"), cex=0.6)
+pal <- colorblind_pal(D[,6:7230], Type)
+#richness
+
+#simple boxplot
+boxplot(H~Infected, data=D.diversity, main="Shannon Diversity")
+boxplot(Pielous.Evenness~Infected, data=D.diversity, main="Pielous Evenness")
+boxplot(Simpson~Infected, data=D.diversity, main="Simpson Diversity")
+boxplot(invsimpson~Infected, data=D.diversity, main="Inverse Simpson Diversity")
+boxplot(bd, main="Beta Diversity")
+
+
+
+# Violin Plots
+install.packages("wesanderson")
+library(tidyverse)
+library(ggthemes)  # for a mapping theme
+library(ggalt)  # for custom map projections
+library(ggrepel)  # for annotations
+library(viridis)  # for nice colours
+library(broom)  # for cleaning up models
+devtools::install_github("wilkox/treemapify")
+library(treemapify)  # for making area graphs
+library(wesanderson)  # for nice colours
+
+
+theme_niwot <- function(){
+  theme_bw() +
+    theme(text = element_text(family = "Helvetica Light"),
+          axis.text = element_text(size = 16), 
+          axis.title = element_text(size = 18),
+          axis.line.x = element_line(color="black"), 
+          axis.line.y = element_line(color="black"),
+          panel.border = element_blank(),
+          panel.grid.major.x = element_blank(),                                          
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          panel.grid.major.y = element_blank(),  
+          plot.margin = unit(c(1, 1, 1, 1), units = , "cm"),
+          plot.title = element_text(size = 18, vjust = 1, hjust = 0),
+          legend.text = element_text(size = 12),          
+          legend.title = element_blank(),                              
+          legend.position = c(0.95, 0.15), 
+          legend.key = element_blank(),
+          legend.background = element_rect(color = "black", 
+                                           fill = "transparent", 
+                                           size = 2, linetype = "blank"))
+}
+D.diversity <- read.csv("D.diversity_nolesion.csv")
+(distributions2 <- ggplot(D.diversity, aes(x = Infected, y = J)) +
+    geom_violin(aes(fill = Infected, colour = Infected), alpha = 0.5) +
+    # alpha controls the opacity
+    theme_niwot())
+
+(distributions3 <- ggplot(D.diversity, aes(x = Infected, y = J)) +
+    geom_violin(aes(fill = Infected, colour = Infected), alpha = 0.5) +
+    geom_boxplot(aes(colour = Infected), width = 0.2) +
+    theme_niwot())
+
+(distributions4 <- ggplot(D.diversity, aes(x = Infected, y = J)) +
+    geom_violin(aes(fill = Infected, colour = Infected), alpha = 0.5) +
+    geom_jitter(aes(colour = Infected), position = position_jitter(0.1), 
+                alpha = 0.3) +
+    theme_niwot())
+
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+distributionsBeta_C <- 
+    ggplot(data = D.diversity, 
+           aes(x = Type, y = B, fill = Infected)) +
+    # The half violins
+    #geom_flat_violin(position = position_nudge(x = 0.2, y = 0), alpha = 0.8) +
+    # The points
+    geom_point(aes(y = B, color = Infected), 
+               position = position_jitter(width = 0.15), size = 2, alpha = 1) +
+    # The boxplots
+    geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.5) +
+    # \n adds a new line which creates some space between the axis and axis title
+    labs(y = "Beta Diversity", x = "Status") + 
+    # Removing legends
+    guides(fill = FALSE, color = FALSE)+
+    # Setting the limits of the y axis
+    #scale_y_continuous(limits = c(0, 30)) +
+    # Picking nicer colours
+    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    theme_niwot()
+
+
+(distributions6 <- 
+    ggplot(data = D.diversity, 
+           aes(x = reorder(Infected, desc(H)), y = H, fill = Infected)) +
+    geom_flat_violin(position = position_nudge(x = 0.2, y = 0), alpha = 0.8) +
+    geom_point(aes(y = H, color = Infected), 
+               position = position_jitter(width = 0.15), size = 1, alpha = 0.1) +
+    geom_boxplot(width = 0.2, outlier.shape = NA, alpha = 0.8) +
+    labs(y = "\nShannon Diversity", x = NULL) +
+    guides(fill = FALSE, color = FALSE) +
+    #scale_y_continuous(limits = c(0, 30)) +
+    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    coord_flip() +
+    theme_niwot())
+
+#wrap plots
+library(patchwork)
+distributionsH + distributionsJ + distributionsS + distributionsIS
+
+#------------Correlation---------#
+#take only infected fragments diversity indices and LGR metrics into one file. 
+library(ggplot2)
+RR <- read.csv("D.diversity_Infected.csv")
+cor.test(RR$LGR,RR$H, method=c("pearson"))
+library("ggpubr")
+scatterB <- ggscatter(RR, x = "LGR", y = "B",
+                     label = "Species",
+                     add = "reg.line", conf.int = TRUE, 
+                     cor.coef = TRUE, cor.method = "spearman",
+                     xlab = "LGR", ylab = "Beta")
+scatterB
+scatterH + scatterJ + scatterS + scatterB
