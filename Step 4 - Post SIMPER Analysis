@@ -1,0 +1,167 @@
+#For analyzing bacteria that have been pulled out from the Simper analysis. 
+
+setwd
+Species.counts <- read.csv("Species.counts_nolesion.csv")
+
+#bacteria above 3% abundance in any treatment group #There is a way to calculate this with code below. I used to have to do it by hand in excel like an IDIOT but youre a lucky duck that I have a smart fiance and now you get to hit enter and have it done. Thank you Amy. See below, around line 82. 
+y <- as.matrix(cbind(Species.counts$alkaliphilus.metalliredigens,Species.counts$nautella.italica,Species.counts$arthrobacter.spp.,Species.counts$thalassobius.mediterraneus,Species.counts$burkholderia.ubonensis,Species.counts$pseudoalteromonas.sp.,Species.counts$arthrobacter.ramosus,Species.counts$fusibacter.sp.,Species.counts$endozoicomonas.spp.,Species.counts$arcobacter.spp.,Species.counts$phaeobacter.sp.,Species.counts$pseudomonas.veronii))
+s <- as.vector(Species.counts$species)
+i <- as.vector(Species.counts$Infected)
+
+m <- aov(y~i)
+summary(m)
+
+#Tukey Post hoc
+tukey.lm <- lm(alkaliphilus.metalliredigens ~ Infected, data = Species.counts)
+tukey.av <- aov(tukey.lm)
+summary(tukey.av)
+
+tukey.test <- TukeyHSD(tukey.av)
+tukey.test
+
+kruskal.test(burkholderia.ubonensis~Infected,data=Species.counts)
+dunnTest(burkholderia.ubonensis~Infected,data=Species.counts)
+
+kruskal.test(endozoicomonas.spp.~Infected,data=Species.counts)
+
+#--------BarGraph-------------#
+mytheme <- theme(legend.position= "right", 
+                 legend.text=element_text(size=8), 
+                 legend.title = element_text(size=10), 
+                 #legend.position = "none",
+                 axis.text.x =element_text(colour = "black", size=12,angle = 90, hjust = 1), #element_blank(),
+                 axis.text.y = element_text(colour = "black", size=12), 
+                 axis.title.x = element_text(size=14), 
+                 axis.title.y = element_text(size=14), 
+                 strip.text.x = element_text(colour = "black", size = 8),
+                 axis.ticks.x = element_blank() 
+)
+species.percentage <- read.csv("Species.percentage_nolesion_barinput.csv")
+library(ggplot2)
+include <- c("Burkholderia ubonensis","Endozoicomonas spp ")
+commensal <- ggplot(data=species.percentage[species.percentage$Bacterium %in% include,], aes(x=Status, y=Abundance, fill=Status)) +
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=Abundance-SE, ymax=Abundance+SE), width=.2, position=position_dodge(.9)) +
+  theme_classic() + labs(x = "Status", y = "Relative Abundance (%)")+
+  scale_fill_brewer(palette="Greens")+
+  mytheme+
+  facet_wrap(~ Bacterium)
+commensal
+
+include <- c("Nautella italica","Pseudoalteromonas sp ","Thalassobius mediterraneus")
+pathogen <- ggplot(data=species.percentage[species.percentage$Bacterium %in% include,], aes(x=Status, y=Abundance, fill=Status)) +
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=Abundance-SE, ymax=Abundance+SE), width=.2, position=position_dodge(.9)) +
+  theme_classic() + labs(x = "Status", y = "Relative Abundance (%)")+
+  scale_fill_brewer(palette="Reds")+
+  mytheme+
+  facet_wrap(~ Bacterium)
+pathogen
+
+include <- c("Hymenoscyphus fructigenus","Chondrus crispus","Alkaliphilus metalliredigens","Nautella italica","Arthrobacter spp.","Thalassobius mediterraneus","Burkholderia ubonensis","Pseudoalteromonas sp.","Arthrobacter ramosus","Fusibacter sp.","Pseudomonas veronii","Endozoicomonas spp.","Arcobacter spp.","Codium fragile","Phaeobacter sp.","Bryopsis hypnoides","Metridium senile","Other")
+c17 <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","cadetblue4","lightsalmon4","khaki4","olivedrab2","coral3","springgreen4","darkblue","hotpink1","tomato4","gray46")
+stacked <- ggplot(data=species.percentage[species.percentage$Bacterium %in% include,], aes(x=Status, y=Abundance, fill=Bacterium)) +
+  geom_bar(stat="identity",position="fill", width=0.5)+
+  theme_classic() + labs(x = "Status", y = "Relative Abundance (%)")+
+  scale_fill_manual(values=c17)+
+  mytheme
+  )
+stacked
+
+library(patchwork)
+stacked +(commensal / pathogen)
+
+
+#Stacked bar plot. 
+##SPECIES
+df_Type_sp<- read.csv("Species.percentage.csv")
+unique(df_Type_sp$Status)
+#filter_df <- aggregate(df_Type,by=df_Type["Specified"],FUN=mean)
+library(dplyr)
+
+#filter to keep bacteria above 3% abundance in any "Type" which is status+species.
+df_sp <- df_Type_sp %>% group_by(Status) %>% summarise_if(is.numeric, mean, na.rm = T) 
+#       take df_type, group data by first 3 columns, take the mean of the grouped data within numeric cols
+colMax <- function(data) sapply(data, max, na.rm = TRUE) #create fxn that returns the max value of each col
+colmax_sp <- colMax(df_sp[,2:1705]) #use the fxn on the numeric cols in the data
+max.3_sp <- colmax[colmax_sp>1] #return any max that is >3
+other_sp <- colmax[colmax_sp<1]
+df.3_sp <- df_sp[,(names(df_sp) %in% names(max.3_sp))] #take the data and only return cols that are found in max.3
+other.df_sp <- df_sp[,(names(df_sp) %in% names(other_sp))]
+other.sum_sp <- rowSums(other.df_sp)
+df.new_sp <- cbind(data.frame(df_sp[,1:3]), data.frame(df.3_sp), data.frame(other.sum_sp)) #recombine the remaining cols with the type col info
+se <- function(x) {sqrt(var(x)/length(x))} #write fxn that returns standard error
+df_se_sp <- df_Type_sp[names(df_Type_sp) %in% names(df.new_sp)] %>% group_by(Status) %>% summarise_if(is.numeric, se) 
+write.csv(df.new_sp, file="BacterialSpecies_byType>1%.csv")
+write.csv(df_se_sp, file="BacterialSpecies_byType>1%_SE.csv")
+#df.new contains means>3
+#df_se contains se of each mean in df.new
+species.percentage <- read.csv("BacterialSpecies_byType>1%_barinput.csv")
+c29 <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","cadetblue4","lightsalmon4","khaki4","olivedrab2","coral3","springgreen4","darkblue","hotpink1","tomato4","gray46", "deeppink2", "coral2", "cadetblue3", "mediumorchid4","orchid3" ,"bisque3", "purple3", "springgreen4","cyan4", "aquamarine3","goldenrod3")
+include <- c("Erythrobacter aquimaris","Halothiobacillus kellyi","Kordia jejudonensis","Treponema brennaborense","Spiroplasma sp ","Tropicibacter phthalicus","Candidatus amoebophilus asiaticus","Nautella italica","Saprospira sp ","Uncultured candidatus planktophila sp","Ponticoccus sp ","Arthrobacter spp ","Thalassobius mediterraneus","Burkholderia ubonensis","Pseudoalteromonas sp ","Arthrobacter ramosus","Maritimibacter sp ","Acinetobacter radioresistens","Thalassobius spp ","Treponema sp ","Endozoicomonas spp ","Arcobacter spp ","Bellilinea spp ","Ruegeria silicibacter sp ","Cyanobacterium spp ","Sporocytophaga spp ","Leisingera aquimarina","Ruegeria mobilis","other")
+stacked <- ggplot(data=species.percentage[species.percentage$Bacterium %in% include,], aes(x=Status, y=Abundance, fill=Bacterium)) +
+  geom_bar(stat="identity",position="fill", width=0.5)+
+  theme_classic() + labs(x = "Status", y = "Relative Abundance (%)")+
+  scale_fill_manual(values=c29)+
+  mytheme
+)
+stacked
+
+
+
+##ORDER
+df_Type <- read.csv("order.percentages.csv")
+#df_Type <- read.csv("BacterialSpecies_byType_controlspecified.csv")
+unique(df_Type$Specified)
+#filter_df <- aggregate(df_Type,by=df_Type["Specified"],FUN=mean)
+library(dplyr)
+#filter to keep bacteria above 3% abundance in any "Type" which is status+species.
+df <- df_Type %>% group_by(Specified, Species, ID) %>% summarise_if(is.numeric, mean, na.rm = T) 
+#       take df_type, group data by first 3 columns, take the mean of the grouped data within numeric cols
+colMax <- function(data) sapply(data, max, na.rm = TRUE) #create fxn that returns the max value of each col
+colmax <- colMax(df[,4:134]) #use the fxn on the numeric cols in the data
+max.3 <- colmax[colmax>3] #return any max that is >3
+other <- colmax[colmax<3]
+df.3 <- df[,(names(df) %in% names(max.3))] #take the data and only return cols that are found in max.3
+other.df <- df[,(names(df) %in% names(other))]
+other.sum <- rowSums(other.df)
+df.new <- cbind(data.frame(df[,1:3]), data.frame(df.3), data.frame(other.sum)) #recombine the remaining cols with the type col info
+se <- function(x) {sqrt(var(x)/length(x))} #write fxn that returns standard error
+df_se <- df_Type[names(df_Type) %in% names(df.new)] %>% group_by(Specified, Species, ID) %>% summarise_if(is.numeric, se) 
+write.csv(df.new, file="BacterialOrder_byType>3%_Samples.csv")
+write.csv(df_se, file="BacterialOrder_byType>3%_SE_Samples.csv")
+#df.new contains means>3
+#df_se contains se of each mean in df.new
+
+order.percentage.type <- read.csv("BacterialOrder_byType>3%_Samples_barinput.csv")
+#include <- c("astreoides Control","astreoides Exposed","astreoides Infected")
+#c17 <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","cadetblue4","lightsalmon4","khaki4","olivedrab2","coral3","springgreen4","darkblue","hotpink1","tomato4","gray46")
+include <- c("Control")
+stacked_CvD_legend <- ggplot(data=order.percentage.type[order.percentage.type$Treatment %in% include,], aes(x=ID, y=Abundance, fill=Order)) +
+  geom_bar(stat="identity",position="fill", width=0.8)+
+  theme_classic() + labs(x = "Status", y = "Relative Abundance (%)") +
+  scale_fill_manual(values=c35)+
+  mytheme
+
+stacked_control
+library(patchwork)
+stacked_fav/stacked_ann
+stacked_nat/stacked_sid
+stacked_por/stacked_ast
+stacked_cav/stacked_ann
+stacked_control/stacked_disease
+c35 <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+  "black", "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#CAB2D6", # lt purple
+  "#FDBF6F", # lt orange
+  "gray70", "khaki2",
+  "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown","cadetblue4","lightsalmon4","khaki4","olivedrab2","coral3","springgreen4","darkblue","hotpink1","tomato4","gray46"
+)
