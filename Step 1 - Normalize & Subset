@@ -1,0 +1,51 @@
+setwd
+#identify minimum reads from a sample, we will normalize proportionally to this read value. In this example it was 3382. 16s on a Miseq should average to 20k reads/sample.
+## this takes a subsample of reads from each OTU; from http://stackoverflow.com/questions/18385099/random-subsampling-in-r
+# create function:
+## Initially takes in a row of the data and the number of samples to take
+sample_species <- function(counts,n) {
+  num_species <- length(counts)
+  total_count <- sum(counts)
+  samples <- sample(1:total_count,n,replace=FALSE)
+  samples <- samples[order(samples)]
+  result <- array(0,num_species)
+  total <- 0
+  for (i in 1:num_species) {
+    result[i] <- length(which(samples > total & samples <= total+counts[i]))
+    total <- total+counts[i]
+  }
+  return(result)
+}
+
+#"OTU.counts" is the original count data from the sequencer. "C" is the normalized and subsetted data. 
+library(readr)
+OTU.counts <- read.csv("OTU.counts.reannotation.csv")
+A <- t(OTU.counts)
+write.csv(A, file = "A.reannotation.csv") #Add treatment and type (coral sample or water sample)
+B <- read.csv("A.reannotation.csv")
+C <- apply(B[,6:7230],1,sample_species,3382)## This applies the above function to the minimum read count of 3382 in our dataset and provides normalized read count results.
+write.csv(C, file = "C.reannotaion.csv")
+D <- t(C) #Had trouble getting this to work but let tab-complete for the function and file fill in the gaps. 
+write.csv(D, file = "D.reannotation.csv") #subsample now completed. Just needs to open the C.csv and add OTU names and sample names. 
+#####export file to excel and save to computer using package xlsx
+#library(xlsx)
+#write.xlsx(C,"/YourPath/C.xlsx",sheetName="Sheet1",col.names=TRUE,row.names=TRUE,append=FALSE,showNA=TRUE)
+#write.xlsx(D,"/YourPath/D.xlsx",sheetName="Sheet1",col.names=TRUE,row.names=TRUE,append=FALSE,showNA=TRUE)
+
+
+#Continue Analysis with normalized data in file "2.Communityanalysis.R"
+
+
+
+
+#This formatting below is for the OTU percentage file, which is used after "3.simper code.R" is completed.
+library(readr)
+OTU.percent <- read.csv("OTU.percentages.REannotated.csv")
+A.percent <- t(OTU.percent)
+write.csv(A.percent, file = "A.percent.reannotation.csv") #Add treatment and type (coral sample or water sample)
+B.percent <- read.csv("A.percent.reannotation.csv")
+C.percent <- apply(B.percent[,4:9057],1,sample_species,6769)## results
+write.csv(C.percent, file = "C.percent.reannotaion.csv")
+D.percent <- t(C.percent) #Had trouble getting this to work but let tab-complete for the function and file fill in the gaps. 
+write.csv(D.percent, file = "D.percent.reannotation.csv") #subsample now completed. Just needs to open the C.csv and add OTU names and sample names. 
+#####export file to excel and save to computer using package xlsx
