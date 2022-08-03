@@ -1,0 +1,42 @@
+setwd
+
+
+###SIMPER analysis
+library(vegan)
+coral.sim=simper(D[,6:7230],D$Infected) #6:7230 are your reads for your bacteria OTUs/ASVs, and I want to compare a column "Infected" which were different disease states (control, disease-exposed, disease-infected).
+summary(coral.sim)
+
+#If the simper is too large to view at once: I found this by going to the environment on the right and clicking "coral.sim" and then the magnfying glass near that
+coral.sim[["Control_Disease Band"]]
+#or
+coral.sim[["Exposed astereoides_Exposed cavernosa"]][["overall"]] ##This little golden nugget is the overall dissimilarity between the comparison being made. It is a metric that can be used to later determine magnitude of change or imbalance (microbial dysbiosis) is occuring.
+
+
+#Send this simper data to an excel file 
+
+results.test.coral.sim <- summary(coral.sim)
+df <- do.call(rbind.data.frame, results.test.coral.sim)
+
+##SIMPER analysis comparing species bacteria community between treatments. The previous simper compared treatments.
+library(vegan)
+coral.sim=simper(D[,5:2663],D$Species)
+summary(coral.sim) 
+summary(coral.sim$Disease_DiseaseBand)
+write.csv(coral.sim$Disease_DiseaseBand)
+
+results.test.coral.sim <- summary(coral.sim)
+df <- do.call(rbind.data.frame, results.test.coral.sim)
+
+#####export file to excel using package xlsx
+install.packages("xlsx")
+library(xlsx)
+install.packages("rJava")
+install.packages("openxlsx")
+library(openxlsx)
+install.packages("writexl")
+
+library(writexl)
+library(rJava)
+library(xlsx)
+require(xlsx)
+write.xlsx(df,"/YourPathHere/simper.species.xlsx",sheetName="Sheet1",col.names=TRUE,row.names=TRUE,append=FALSE,showNA=TRUE)
