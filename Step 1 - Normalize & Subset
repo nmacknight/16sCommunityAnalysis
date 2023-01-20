@@ -1,6 +1,6 @@
 setwd
-#identify minimum reads from a sample, we will normalize proportionally to this read value. In this example it was 3382. 16s on a Miseq should average to 20k reads/sample.
-## this takes a subsample of reads from each OTU; from http://stackoverflow.com/questions/18385099/random-subsampling-in-r
+#identify minimum reads from a sample, we will normalize proportionally to this read value. This style of normalization has interchangeable names (Total Sum Scaling, proportional normalization). It is not rarefying which is random subsamping, this is proportional. In this example it was 3382 reads/sample. The target reads on a Miseq was 20k reads/sample for THIS project. Your target reads may differ (like if you are using an entire plate on the miseq which is 20Million reads divided by your number of samples, is your target reads/sample). So if I were to pay for a whole run and put 200 samples on it, I can hope for 100k reads/sample as my target.
+## this takes a proportional subsample of reads from each OTU; from http://stackoverflow.com/questions/18385099/random-subsampling-in-r
 # create function:
 ## Initially takes in a row of the data and the number of samples to take
 sample_species <- function(counts,n) {
