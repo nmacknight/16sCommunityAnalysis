@@ -1,13 +1,13 @@
-# 16s Microbiome Analysis
-Follow files in order 1-4.
+# 16s Microbiome Statistical Analysis
+Once you have completed [Qiime2](https://github.com/nmacknight/16sCommunityAnalysis/blob/main/Qiime2%20Pipeline%20-%20Educational%20Descriptions.md), follow files in order 1-4 for statistical analysis in R.
 
-Step 1 - Normalize & Subset
+1. Total Sum Scaling Normalization & Subset
 
-Step 2 - Main Analysis
+2. Differential Abundance Analysis
 
-Step 3 - SIMPER
+3. SIMPER
 
-Step 4 - Post SIMPER Analysis
+4. Post SIMPER Analysis
 
 You can find the scripts here or go to the zenodo link. https://doi.org/10.5281/zenodo.4635319
 
