@@ -1,4 +1,7 @@
 # 16s Microbiome Statistical Analysis
+
+Source data used to create all figures including 16s sequences are stored at NCBI through BioProject accession **PRJNA667272**
+
 Once you have completed [Qiime2](https://github.com/nmacknight/16sCommunityAnalysis/blob/main/Qiime2%20Pipeline%20-%20Educational%20Descriptions.md), follow files in order 1-4 for statistical analysis in R.
 
 1. Total Sum Scaling Normalization & Subset
