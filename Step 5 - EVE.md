@@ -4,14 +4,15 @@ Originally built for RNAseq analysis, this pipeline applies the EVE Model to mic
 This will allow for the identification of lineage-specific and phylosymbiotic bacteria in a formal, scalable, and replicable manner.
 
 This analysis is a new approach to microbial ecology research that deserves emphasizing. Common investigations in coral research compare differential abundance and diversity, few look at networks, and it requires a decade of research to anecdotally classify bacteria as "species-specific".
+
 This model allows for formal and scalable identification of these species-specific bacteria and the implications of these co-evolved bacteria allow researchers to address emerging questions and historical questions we havent previously had the accurate tools to address inclduing:
 
-Identification of the Core Microbiome
-Host-Microbe Co-evolution
-Integral Members of Microbial Networks
-Preventative Mediators of Dysbiosis
-The Microbiome's Evolutionary Constraints
-Evolved Holobiont Dependence Differences among Hosts
+- Identification of the Core Microbiome
+- Host-Microbe Co-evolution
+- Integral Members of Microbial Networks
+- Preventative Mediators of Dysbiosis
+- The Microbiome's Evolutionary Constraints
+- Evolved Holobiont Dependence Differences among Hosts
 
 With the EVE model, we can investigate these topics, whereas before the methods to do so have been missing or not satisfying the consitency we aim for.
 
