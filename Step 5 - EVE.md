@@ -130,7 +130,7 @@ write.csv(Bac_EVE_sig, file="Signficant EVE Bacteria.csv")
 with(Bac_EVE, plot(log(beta),LRT, pch=20, main="EVE", xlim=c(-5,5),ylim=c(-1,110)))
 
 # Add colored points: red if padj<0.05, orange of log2FC>1, green if both)
-with(subset(Bac_EVE, LRT>3.4), points(log(beta), LRT, pch=20, col="mediumpurple1")) #Lineage Specific bacteria (LRT>3.4) Because this is an arbitrary cutoff between beta and LRT values at this point. 96 microbes have an LRT>3.4
+with(subset(Bac_EVE, LRT>3.4), points(log(beta), LRT, pch=20, col="mediumpurple1"))
 with(subset(Bac_EVE, (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="pink1"))
 with(subset(Bac_EVE, LRT>3.4 & (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="slateblue3"))
 
