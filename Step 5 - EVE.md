@@ -3,16 +3,18 @@
 Originally built for RNAseq analysis, this pipeline applies the EVE Model to microbial abundances rather than gene counts.
 This will allow for the identification of lineage-specific and phylosymbiotic bacteria in a formal, scalable, and replicable manner.
 
-This analysis is a new approach to microbial ecology research that deserves emphasizing. Common investigations in coral research compare differential abundance and diversity, few look at networks, and it requires a decade of research to anecdotally classify bacteria as "species-specific".
+This analysis is a new approach to microbial ecology research that deserves emphasizing. Common investigations in coral research compare differential abundance and diversity, few look at networks, and it has required about a decade of research to anecdotally classify bacteria as "species-specific".
 
 This model allows for formal and scalable identification of these species-specific bacteria and the implications of these co-evolved bacteria allow researchers to address emerging questions and historical questions we havent previously had the accurate tools to address inclduing:
 
-- Identification of the Core Microbiome
-- Host-Microbe Co-evolution
-- Integral Members of Microbial Networks
-- Preventative Mediators of Dysbiosis
-- The Microbiome's Evolutionary Constraints
-- Evolved Holobiont Dependence Differences among Hosts
+It is worth emphasizing, this model allows us to now identify empircally supported evidence that addresses long standing theories in microbial ecology.
+
+- Identification of the Core Microbiome (lineage-specific bacteria are empirically supported bacteria of the core microbiome)
+- Host-Microbe Co-evolution (Some coral lineages will notably possess more/less of these lineage-specific bacteria)
+- Integral Members of Microbial Networks (Central/Hub bacteria with a lineage-speific signature)
+- Preventative Mediators of Dysbiosis (Co-evolved bacteria when they are retained/enriched during disturbances)
+- The Microbiome's Evolutionary Constraints (The Pathobiome - Lineage-specific bacteria associated with susceptibility)
+- Evolved Holobiont Dependence Differences among Hosts (Is the microbiome equally relevant at mitiginating disturbances? Not always or equally across coral lineages and this helps us evaluate that holobiont dependence.)
 
 With the EVE model, we can investigate these topics, whereas before the methods to do so have been missing or not satisfying the consitency we aim for.
 
@@ -53,6 +55,8 @@ bacteriaMat <- log10(bacteriaMat[,1:68]+1) #applying the log transform
 ### Species phylogeny
 
 The species phylogeny is in Newick format (from Orthofinder) which can be read using the `read.tree` function in the `ape` package:
+> You will need transcriptomic or genomic data to infer a phylogenetic tree. If you do not have this specific to your project on hand, you can source related host lineage transcriptomic or genomic references from NCBI and import that into Orthofinder or MEGA as another popular tool to create a phylogenetic tree. The Newick fromat is the numbers and parenthesis you see below, it is the visual phylogenetic tree written out.
+
 ```{r}
 library(ape)
 
@@ -84,21 +88,18 @@ colSpecies
 
 ## Running the beta shared test
 
-The beta shared test, (a.k.a. phylogenetic ANOVA), can detect genes with increased or decreased ratios of expression divergence to diversity (this ratio is the beta parameter). The model can be used for purposes such as identifying genes with high expression divergence between species as candidates for expression level adaptation, and genes with high expression diversity within species as candidates for expression level conservation and or plasticity.
+The beta shared test, (a.k.a. phylobacteriatic ANOVA), can detect bacterias with increased or decreased ratios of expression divergence to diversity (this ratio is the beta parameter). The model can be used for purposes such as identifying bacterias with high expression divergence between species as candidates for expression level adaptation, and bacterias with high expression diversity within species as candidates for expression level conservation and or plasticity.
 
-This works by finding a shared beta that gives the maximum likelihood across all genes and comparing that to the model where the beta is fitted to each individual gene.
+This works by finding a shared beta that gives the maximum likelihood across all bacterias and comparing that to the model where the beta is fitted to each individual bacteria.
 
 ```{r runTest, cache=TRUE}
 #Bacteria results
-res <- betaSharedTest(tree = speciesTree, gene.data = bacteriaMat, colSpecies = colSpecies)
+res <- betaSharedTest(tree = speciesTree, bacteria.data = bacteriaMat, colSpecies = colSpecies)
 res$sharedBeta
-#fit with shared beta = 4.687645
-#deleted these bacteria because they had an abundance of 0 in all samples (they must have been present in lesion line samples which have been removed from this dataset.)
-#symbiobacterium sp., tepidamorphus_gemmatus, and about other bacteria I have never heard of. 
 ```
 ### Results: LRT
 
-The log likelihood ratio between the individual and shared beta fit indicates whether the individual beta was a better fit, i.e. the gene has an increased or decreased ratios of expression divergence to diversity. The log likelihood ratio test statistic is given `LRT` in the returned result and should follow a chi-squared distribution with one degree of freedom.
+The log likelihood ratio between the individual and shared beta fit indicates whether the individual beta was a better fit, i.e. the bacteria has an increased or decreased ratios of expression divergence to diversity. The log likelihood ratio test statistic is given `LRT` in the returned result and should follow a chi-squared distribution with one degree of freedom.
 
 ```{r}
 # plot likelihood ratio test statistic histogram
@@ -167,7 +168,7 @@ x = seq(0.2,10,length.out = 100)
 y = dchisq(x,df = 1)
 lines(x,y,col="red")
 
-Results: 66 of the 160 Highly Variable bacteria have a frequency of 1. i.e 66 bacteria are found in only one coral fragment.
+Results: 66 of the 160 Highly Variable bacteria have a frequency of 1. i.e 66 bacteria are found in only one coral fragment. This makes them not so biologically relevant.
 
 ```
 ### PCA - Figure 1B, 1C
@@ -281,8 +282,8 @@ HEVPCA | LSPCA | PSPCA
 violin+(LRTPCA/betaPCA)
 LRTPCA|violin|betaPCA
 
-Results: LSPCA separates by species, organized by phylogeny. Porites and Siderastraea overlap a lot. The orbicella are divergent. Montastraea is more similar to O.annularis. Cnat seems highly variable per usual. PC1 loading is quite high (46.73%)
-Discussion: The takeaway from HEVPCA is that the species cluster on top of each other. 
+Results: LSPCA separates by species, organized by phylogeny as expected. Porites and Siderastraea overlap a lot. The orbicella are divergent. Montastraea is more similar to O.annularis. Cnat seems highly variable per usual. PC1 loading is quite high (46.73%)
+Discussion: The takeaway from HEVPCA is that the species cluster on top of each other as expected showing low host influence.
 ```
 
 ### Bacteria Summary of Expression Patterns
@@ -294,7 +295,7 @@ p.piscicida_species
 endozoicomonas.spp_species #*
 
 
-#Aligns with phylogenetic similarity. Possible phylosymbiosis. Identified by visualizing bacteria with lowest alpha values.
+#Aligns with phylobacteriatic similarity. Possible phylosymbiosis. Identified by visualizing bacteria with lowest alpha values.
 t.cechii_species
 roseicyclus.spp_species
 hyphomonas.spp_species
@@ -845,9 +846,9 @@ for (i in 1:length(bacteria)){ #iterates loop over each column of bacteria
 #         Rename "binder" > View > Page display > Two page scrolling
 ```
 
-### Phylogenetic Correlation - Pegal's Lambda - For Loop - Figure 2
+### Phylobacteriatic Correlation - Pegal's Lambda - For Loop - Figure 2
 ```{r}
-# Example Phylogenetic correlation
+# Example Phylobacteriatic correlation
 
 trait<-sig_LS_Bac_avg$ruegeria.silicibacter.sp
 names(trait)<-(sig_LS_Bac_avg$Species)
@@ -857,7 +858,7 @@ phylosig(speciesTree, trait, method="lambda", test=TRUE, nsim=999)
 
 #Prepare Loop
 
-#Identify the phylogenetic tree
+#Identify the phylobacteriatic tree
 speciesTree <-read.tree(text="((P.porites:0.0952845,P.astreoides:0.101606):0.790892,((C.natans:0.122831,(M.cavernosa:0.0936041,(O.faveolata:0.174805,O.annularis:0.174805):.3):0.307649):0.658835,S.siderea:0.154932):0.790892);")
 vcv.phylo(speciesTree)
 
@@ -888,7 +889,7 @@ for (i in 1:length(corr_bacteria)){ #iterates loop over each column of bacteria
   print(paste0("Now running: ", str_to_sentence(trip_name), ", #", i, " of ", length(corr_bacteria), " bacteria"))
   
   # CORRELATION CODE
-  # We chose Lineage Specific Bacterial Abundance as the trait we are testing for phylogenetic signal. Then, we do the test with 999 randomizations:
+  # We chose Lineage Specific Bacterial Abundance as the trait we are testing for phylobacteriatic signal. Then, we do the test with 999 randomizations:
   output <- phylosig(speciesTree, trait, method="lambda", test=TRUE, nsim=999)
   
   #Put the output into a dataframe and bind it with the previous outputs
@@ -1156,7 +1157,7 @@ cor.test(avg.EV_RR_NA$tetracoccus.cechii,avg.EV_RR_NA$RelativeRisk, method=c("pe
 
 #My code
 
-#Identify the phylogenetic tree
+#Identify the phylobacteriatic tree
 results <- read.csv("~/Desktop/White Plague /Mechanisms/Mechanisms/EVE Bacteria/EVE_results.csv")
 
 library(tidyverse)
@@ -1186,7 +1187,7 @@ for (i in 1:length(corr_bacteria)){ #iterates loop over each column of bacteria
   print(paste0("Now running: ", str_to_sentence(trip_name), ", #", i, " of ", length(corr_bacteria), " bacteria"))
   
   # CORRELATION CODE
-  # We chose Lineage Specific Bacterial Abundance as the trait we are testing for phylogenetic signal. Then, we do the test with 999 randomizations:
+  # We chose Lineage Specific Bacterial Abundance as the trait we are testing for phylobacteriatic signal. Then, we do the test with 999 randomizations:
   RR_output <- cor.test(data$bacteria,data$RelativeRisk, method=c("pearson"))
   
   #Put the output into a dataframe and bind it with the previous outputs
@@ -1335,7 +1336,7 @@ cor.test(avg.EV_RR_NA$tetracoccus.cechii,avg.EV_RR_NA$RelativeRisk, method=c("pe
 
 #My code
 
-#Identify the phylogenetic tree
+#Identify the phylobacteriatic tree
 results <- read.csv("EVE_results.csv")
 
 results_avg <- results %>% group_by(Species) %>% summarize_if(is.numeric, mean, na.rm = T)
@@ -1364,7 +1365,7 @@ for (i in 1:length(corr_bacteria)){ #iterates loop over each column of bacteria
   print(paste0("Now running: ", str_to_sentence(trip_name), ", #", i, " of ", length(corr_bacteria), " bacteria"))
   
   # CORRELATION CODE
-  # We chose Lineage Specific Bacterial Abundance as the trait we are testing for phylogenetic signal. Then, we do the test with 999 randomizations:
+  # We chose Lineage Specific Bacterial Abundance as the trait we are testing for phylobacteriatic signal. Then, we do the test with 999 randomizations:
   RR_output <- cor.test(data$bacteria,data$RelativeRisk, method=c("pearson"))
   
   #Put the output into a dataframe and bind it with the previous outputs
@@ -2241,7 +2242,7 @@ Steps:
   -Prepare SIMPER analysis to compare infected v exposed treatment outcome. 
   -Box and whisker plot and ANOVA/tukey test most dissimilar bacterial abundances. 
   -Group bacteria by apparent abundance in resistant fragments as putatively "good" PS/LS bacteria and then another group for susceptible fragments as putatively co-evolved pathogenic bacteria.
-  -Put these "good" and "bad" categorical groupings into WGCNA to see if a gene module is in CONSISTENT correlation with a majority of the bacteria in each categorical group
+  -Put these "good" and "bad" categorical groupings into WGCNA to see if a bacteria module is in CONSISTENT correlation with a majority of the bacteria in each categorical group
   - GO that module. This is a putative host-microbe interaction that is associated with whether that coral gets infected or not. 
 
 #Porites astreoides
