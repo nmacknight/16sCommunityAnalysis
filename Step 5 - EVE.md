@@ -1,13 +1,14 @@
 # Expression Variance and Evolution (EVE) Model
 
-Originally built for RNAseq analysis, this pipeline applies the EVE Model to microbial abundances rather than gene counts.
-This will allow for the identification of lineage-specific and phylosymbiotic bacteria in a formal, scalable, and replicable manner.
+Designed for quantitative data, the EVE model has been utilized in RNAseq analysis. This pipeline applies the EVE Model to microbial abundances rather than gene counts. When I first used the EVE model, it had just been published and the code wasnt even organized yet for public use. So I had some conversations with Lars Gronvold, the author of the github code for EVE. He managed to organize EVE for public use and through that conversation, discussed the use of the EVE model with microbial data. Because the model was designed for quantitative data, microbial abundance counts were considered appropriate. As many researchers who work with 16s or rnaseq know, some tools are shared between 16s and rnaseq.
 
-This analysis is a new approach to microbial ecology research that deserves emphasizing. Common investigations in coral research compare differential abundance and diversity, few look at networks, and it has required about a decade of research to anecdotally classify bacteria as "species-specific".
+By applying the EVE model, researchers will be now able to identify lineage-specific and phylosymbiotic bacteria in a formal, scalable, and replicable manner.
 
-This model allows for formal and scalable identification of these species-specific bacteria and the implications of these co-evolved bacteria allow researchers to address emerging questions and historical questions we havent previously had the accurate tools to address inclduing:
+This analysis is a new approach to microbial ecology research that I hope to bring attention to. Personally, I see it as a new "tenet" in microbial ecology when compariing host species. Other tenets which are common in coral microbial ecology compare i.) differential abundance and ii.) diversity, few look at iii.) networks, and it requires a lot of repeat sampling/independent studies and time (about a decade of research) to anecdotally classify bacteria as "species-specific".
 
-It is worth emphasizing, this model allows us to now identify empircally supported evidence that addresses long standing theories in microbial ecology.
+This model allows for formal and scalable identification of these species-specific bacteria and the implications of these co-evolved bacteria allow researchers to address emerging questions and historical questions we havent previously had the accurate tools to address including:
+
+(I use the terms "species-specific" and "lineage-specific" synonymously. I also use the term "co-evolved" bacteria as a parental term that includes both lineage-specific and phylosymbiotic bacteria.)
 
 - Identification of the Core Microbiome (lineage-specific bacteria are empirically supported bacteria of the core microbiome)
 - Host-Microbe Co-evolution (Some coral lineages will notably possess more/less of these lineage-specific bacteria)
@@ -17,6 +18,14 @@ It is worth emphasizing, this model allows us to now identify empircally support
 - Evolved Holobiont Dependence Differences among Hosts (Is the microbiome equally relevant at mitiginating disturbances? Not always or equally across coral lineages and this helps us evaluate that holobiont dependence.)
 
 With the EVE model, we can investigate these topics, whereas before the methods to do so have been missing or not satisfying the consitency we aim for.
+
+Important! > To use the EVE Model, you need a dataste of quantitative counts (e.g. bacteria abundances or gene counts) and the phylogenetic distance between host species. I will explain how to obtain the phylogenetic distances in the pipeline.
+
+> Here is the cool thing, you are not giving EVE your metadata, only which sample belongs to which host species (which is a bit of metadata really), the point is that EVE does not know what your treatment is or the response or any dependent variables besides the count matrix and phylogenetic tree.
+> To better visualize lineage-specific bacteria, this will likely be a bacteria that within a species, there will be little variation in abundance, but the abundance between species is quite distinct or divergent. This is what makes the bacteria lineage-specific, its not responding to the treatment in its abundance and is divergent in its abundance relative to other species.
+> By contrast, a highly variable bacteria will have a lot of variation in its abundance within a coral species, but between coral species, the abundance will have a similar average abundance. This means there isnt a lineage-specific relationship between highly variable bacteria and their coral host and perhaps this variation is the result of the treatment conditions.
+> Finally, we are able to identify phylosymbiotic bacteria. This is a stricter classifcation of bacteria from the pool of lineage-specific bacteria. A phylosymbiotic bacteria will have an abundance pattern that recapitulates the host phylogenetic distance. I perform an additional Pegal's Lambda to determine signficance of this but the EVE output, specifically the low alpha value, points to candidates for phylosymbiosis.
+> Perhaps you can now imagine the exciting questions that can be formally addressed now that those classifications are empirically supported and can be done at scale.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -32,7 +41,7 @@ library(evemodel)
 
 ```{r}
 # White Plague Microbiome. read tab separated table
-setwd("~/Desktop/White Plague /Microbiome/Data/Analysis/ReAnnotated")
+setwd("~/Desktop/White Plague /Microbiome/Data/Analysis/Annotated")
 bacteriaTbl <- read.delim("Bacteria_EVE_input.txt")
 head(bacteriaTbl)
 colnames(bacteriaTbl)
@@ -55,7 +64,7 @@ bacteriaMat <- log10(bacteriaMat[,1:68]+1) #applying the log transform
 ### Species phylogeny
 
 The species phylogeny is in Newick format (from Orthofinder) which can be read using the `read.tree` function in the `ape` package:
-> You will need transcriptomic or genomic data to infer a phylogenetic tree. If you do not have this specific to your project on hand, you can source related host lineage transcriptomic or genomic references from NCBI and import that into Orthofinder or MEGA as another popular tool to create a phylogenetic tree. The Newick fromat is the numbers and parenthesis you see below, it is the visual phylogenetic tree written out.
+> You will need transcriptomic or genomic data to infer a phylogenetic tree. If you do not have this specific to your project on hand, you can source host lineage transcriptomic or genomic references from NCBI and import that into Orthofinder or MEGA as another popular tool to create a phylogenetic tree. The Newick format is the numbers and parenthesis you see below, it is the visual phylogenetic tree written out.
 
 ```{r}
 library(ape)
@@ -88,14 +97,19 @@ colSpecies
 
 ## Running the beta shared test
 
-The beta shared test, (a.k.a. phylobacteriatic ANOVA), can detect bacterias with increased or decreased ratios of expression divergence to diversity (this ratio is the beta parameter). The model can be used for purposes such as identifying bacterias with high expression divergence between species as candidates for expression level adaptation, and bacterias with high expression diversity within species as candidates for expression level conservation and or plasticity.
+The beta shared test, (a.k.a. phylogenetic ANOVA), can detect bacteria with increased or decreased ratios of expression divergence to diversity (this ratio is the beta parameter). The model can be used for purposes such as identifying bacteria with high expression divergence between species as candidates for expression level adaptation (lineage-specific), and bacteria with high expression diversity within species as candidates for expression level conservation and or plasticity (highly variable).
 
 This works by finding a shared beta that gives the maximum likelihood across all bacterias and comparing that to the model where the beta is fitted to each individual bacteria.
+
+> Basically, the shared beta can be imagined as the average variation across your dataset, and then individual bacteria are examined to determine if their pattern of variation is signficantly (lineage-specific or highly variable).
+
 
 ```{r runTest, cache=TRUE}
 #Bacteria results
 res <- betaSharedTest(tree = speciesTree, bacteria.data = bacteriaMat, colSpecies = colSpecies)
 res$sharedBeta
+log(res$sharedBeta)
+# 1.54493
 ```
 ### Results: LRT
 
@@ -111,84 +125,11 @@ y = dchisq(x,df = 1)
 lines(x,y,col="red")
 ```
 
-# Figure Creation
-
-### Volcano Plot - Figure 1A, Supp Data 1
-```{r}
-Bac_EVE <- read.csv("R_EVE_results_WP_bacteria_7species.csv")
-
-colnames(Bac_EVE)
-colnames(Shared_EVE)[colnames(Shared_EVE)=="X"] <- "Entry"
-#res <- read.table("siderea_volcano.txt", header=TRUE) #previously did this
-head(Bac_EVE)
-
-library(tidyverse)
-Bac_EVE_sig <- Bac_EVE %>% filter(pval <= 0.1)
-write.csv(Bac_EVE_sig, file="Signficant EVE Bacteria.csv")
-
-# Make a basic volcano plot
-
-with(Bac_EVE, plot(log(beta),LRT, pch=20, main="EVE", xlim=c(-5,5),ylim=c(-1,110)))
-
-# Add colored points: red if padj<0.05, orange of log2FC>1, green if both)
-with(subset(Bac_EVE, LRT>3.4), points(log(beta), LRT, pch=20, col="mediumpurple1"))
-with(subset(Bac_EVE, (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="pink1"))
-with(subset(Bac_EVE, LRT>3.4 & (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="slateblue3"))
-
-# Label points with the textxy function from the calibrate plot
-library(calibrate)
-with(subset(Bac_EVE_sig, LRT>20 & abs(log(beta))>0), textxy(log(beta), LRT, labs=Bacteria, cex=0.7, offset=0.6))
-with(subset(Bac_EVE_sig, LRT<5 & abs(log(beta))>2), textxy(log(beta), LRT, labs=Bacteria, cex=0.7, offset=0.6))
-
-# results: There are 268 EVE bacteria. 108 of them are Lineage specific, the other 160 are Highly Variable.
-# Discussion: NA
-```
-### Histogram - Supp Fig 1
-```{r}
-# Counting the Frequency of times a sig HEV Bac is in a coral fragment
-threshold <- 4.342923e-05 # This is the 0. 
-
-Bac_EVE_sig$Frequency <- rowSums(Bac_EVE_sig[, 12:113] > threshold, na.rm = TRUE)
-
-
-
-#Histogram
-#HEV_Bac <- read.csv("Putative HEV EVE Bacteria.csv")
-#Bacteria_EVE_input <- read.csv("Bacteria_EVE_input.csv") #all bacteria
-HEV_Bac_Freq30 <- Bac_EVE_sig %>% filter(Frequency > 30) #keep only bacteria with a frequency greater than 10. 
-HEV_Bac_Freq20 <- Bac_EVE_sig %>% filter(Frequency > 20) #keep only bacteria with a frequency greater than 10. 
-HEV_Bac_Freq10 <- Bac_EVE_sig %>% filter(Frequency > 10) #keep only bacteria with a frequency greater than 10. 
-HEV_Bac_Freq5 <- Bac_EVE_sig %>% filter(Frequency > 5) #keep only bacteria with a frequency greater than 5.
-HEV_Bac_Freq3 <- Bac_EVE_sig %>% filter(Frequency > 3) #keep only bacteria with a frequency greater than 3. 
-
-hist(Bac_EVE_sig$Frequency,freq = F)
-
-# Plot the chi-squared distribution with one degree of freedom
-x = seq(0.2,10,length.out = 100)
-y = dchisq(x,df = 1)
-lines(x,y,col="red")
-
-Results: 66 of the 160 Highly Variable bacteria have a frequency of 1. i.e 66 bacteria are found in only one coral fragment. This makes them not so biologically relevant.
-
-```
 ### PCA - Figure 1B, 1C
 ```{r}
-'''
-# Add Metadata to Bacteria EVE Results
-Bac_EVE_sig_meta <- Bac_EVE_sig
-
-sig_LS_Bac <- t((sig_LS_Bac[,c(1,12:length(sig_LS_Bac))]))
-
-colnames(sig_LS_Bac) <- sig_LS_Bac[1,]
-sig_LS_Bac. <- sig_LS_Bac[-1,]
-sig_LS_Bac. <- cbind(SampleID = rownames(sig_LS_Bac.), sig_LS_Bac.)
-
-sig_LS_Bac_meta <- merge(metadata,sig_LS_Bac., by="SampleID")
-'''
-
 
 # Isolate LRT and HEV Bacteria
-sig_LS_Bac <- Bac_EVE_sig[Bac_EVE_sig$LRT > 5, ] #25 Bacteria
+sig_LS_Bac <- Bac_EVE_sig[Bac_EVE_sig$LRT > res$sharedbeta, ] 
 
 sig_LS_Bac <- t((sig_LS_Bac[,c(1,12:length(sig_LS_Bac))]))
 
@@ -198,11 +139,11 @@ sig_LS_Bac. <- cbind(SampleID = rownames(sig_LS_Bac.), sig_LS_Bac.)
 
 sig_LS_Bac_meta <- merge(metadata,sig_LS_Bac., by="SampleID")
 
-write.csv(sig_LS_Bac_meta, file="/Users/nicholas.macknight/Desktop/Autumn16s/Autumn16s/sig_LS_Bac_meta.csv") # converted to numeric. 
-sig_LS_Bac_meta <- read.csv("/Users/nicholas.macknight/Desktop/Autumn16s/Autumn16s/sig_LS_Bac_meta.csv")
+write.csv(sig_LS_Bac_meta, file="path/sig_LS_Bac_meta.csv") # converted to numeric. 
+sig_LS_Bac_meta <- read.csv("path/sig_LS_Bac_meta.csv")
 
 
-sig_HEV_Bac <- Bac_EVE_sig[Bac_EVE_sig$LRT < 5, ] #654 Bacteria
+sig_HEV_Bac <- Bac_EVE_sig[Bac_EVE_sig$LRT < res$sharedbeta, ]
 
 sig_HEV_Bac <- t((sig_HEV_Bac[,c(1,12:length(sig_HEV_Bac))]))
 
@@ -212,17 +153,8 @@ sig_HEV_Bac. <- cbind(SampleID = rownames(sig_HEV_Bac.), sig_HEV_Bac.)
 
 sig_HEV_Bac_meta <- merge(metadata,sig_HEV_Bac., by="SampleID")
 
-write.csv(sig_HEV_Bac_meta, file="/Users/nicholas.macknight/Desktop/Autumn16s/Autumn16s/sig_HEV_Bac_meta.csv") # converted to numeric. 
-sig_HEV_Bac_meta <- read.csv("/Users/nicholas.macknight/Desktop/Autumn16s/Autumn16s/sig_HEV_Bac_meta.csv")
-
-'''
-#PCA
-setwd("~/Desktop/White Plague /Mechanisms/Mechanisms/EVE Bacteria")
-install.packages("ggfortify")
-library(ggfortify)
-sig_LS_Bac <- read.csv("Putative LS EVE Bacteria_transposed.csv")
-sig_HEV_Bac <- read.csv("Putative HEV EVE Bacteria_transposed.csv")
-'''
+write.csv(sig_HEV_Bac_meta, file="path/sig_HEV_Bac_meta.csv") # converted to numeric. 
+sig_HEV_Bac_meta <- read.csv("path/sig_HEV_Bac_meta.csv")
 
 
 #Lineage-Specific
@@ -259,24 +191,8 @@ HEVPCA <- HEVPCA + theme(legend.position="bottom")+
                             values=c("orangered3", "indianred2", "cornflowerblue", "skyblue2", "mediumseagreen", "springgreen4", "green4"))
 HEVPCA 
 
-#It appears 
-#Cnat_X79.C5,
-#Mcav_X86.D2 
-#Past_X110.D5 
-#Cnat_X80.D3
-#Mcav_X83.C4
-#Cnat_X77.C4
-#are outliers and are removed in a newly made file: "Putative HEV EVE Bacteria_transposed_outliersRemoved.csv"
-
-sig_HEV_Bac_liers <- read.csv("Putative HEV EVE Bacteria_transposed_outliersRemoved.csv") #75 bacteria removed for having 0 abundance. 
-HEV_PCA_input_liers <- sig_HEV_Bac_liers[,7:103]
-pca_res_HEV_liers <- prcomp(HEV_PCA_input_liers, scale. = TRUE)
-HEVPCAliers <- autoplot(pca_res_HEV_liers, data = sig_HEV_Bac_liers, colour = 'Species',shape = 'Status',label = TRUE,frame = TRUE, frame.type = 'norm')
-HEVPCAliers <- HEVPCAliers + theme(legend.position="bottom")
-HEVPCAliers # I think you could get rid of outliers until you lost have your samples. Before removing outliers, the takeaway from HEVPCA is that the vast majority of samples cluster with minimal deviation from the 0.0 axis on either y or x axis. and the outliers are the result of one bacteria species having an abundance in one of the outlier samples. 
-
 library(patchwork)
-HEVPCA | HEVPCAliers
+HEVPCA
 HEVPCA | LSPCA | PSPCA 
 
 violin+(LRTPCA/betaPCA)
@@ -286,32 +202,58 @@ Results: LSPCA separates by species, organized by phylogeny as expected. Porites
 Discussion: The takeaway from HEVPCA is that the species cluster on top of each other as expected showing low host influence.
 ```
 
-### Bacteria Summary of Expression Patterns
+# Figure Creation
+
+### Volcano Plot - Figure 1A, Supp Data 1
 ```{r}
-#*representative bacteria for that abundance pattern. 
+Bac_EVE <- read.csv("R_EVE_results_WP_bacteria_7species.csv")
 
-#Lineage Specific Bacteria
-p.piscicida_species
-endozoicomonas.spp_species #*
+colnames(Bac_EVE)
+colnames(Shared_EVE)[colnames(Shared_EVE)=="X"] <- "Entry"
+#res <- read.table("siderea_volcano.txt", header=TRUE) #previously did this
+head(Bac_EVE)
 
+library(tidyverse)
+Bac_EVE_sig <- Bac_EVE %>% filter(pval <= 0.1)
+write.csv(Bac_EVE_sig, file="Signficant EVE Bacteria.csv")
 
-#Aligns with phylobacteriatic similarity. Possible phylosymbiosis. Identified by visualizing bacteria with lowest alpha values.
-t.cechii_species
-roseicyclus.spp_species
-hyphomonas.spp_species
-oleiphilus.spp_species
-p.veronii_species
-ruegeria.silicibacter.sp_species #* Ruegeria strains, dinoflagellate-associated bacteria, show protective activity, against V. coralliilyticus. 
+# Make a basic volcano plot
 
-#Correlated to Relative Risk
-bellilinea.spp_RR_Corr #t = 4.0557, df = 5, p-value = 0.00977, cor = 0.876. More bellilinea is associated with susceptibility
-pseudoalteromonas.piscicida_RR_Corr
+with(Bac_EVE, plot(log(beta),LRT, pch=20, main="EVE", xlim=c(-5,5),ylim=c(-1,110)))
 
-ggsave("ruegeria.silicibacter.sp_species.pdf")
+# Add colored points: red if padj<0.05, orange of log2FC>1, green if both)
+with(subset(Bac_EVE, LRT>3.4), points(log(beta), LRT, pch=20, col="mediumpurple1"))
+with(subset(Bac_EVE, (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="pink1"))
+with(subset(Bac_EVE, LRT>3.4 & (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="slateblue3"))
 
-#
+# Results: There are 268 EVE bacteria. 108 of them are Lineage specific, the other 160 are Highly Variable.
 
 ```
+### Histogram - Supp Fig 1
+```{r}
+
+Bac_EVE_sig$Frequency <- rowSums(Bac_EVE_sig[, 12:113] > 0, na.rm = TRUE)
+
+#Histogram
+#HEV_Bac <- read.csv("Putative HEV EVE Bacteria.csv")
+#Bacteria_EVE_input <- read.csv("Bacteria_EVE_input.csv") #all bacteria
+HEV_Bac_Freq30 <- Bac_EVE_sig %>% filter(Frequency > 30) #keep only bacteria with a frequency greater than 10. 
+HEV_Bac_Freq20 <- Bac_EVE_sig %>% filter(Frequency > 20) #keep only bacteria with a frequency greater than 10. 
+HEV_Bac_Freq10 <- Bac_EVE_sig %>% filter(Frequency > 10) #keep only bacteria with a frequency greater than 10. 
+HEV_Bac_Freq5 <- Bac_EVE_sig %>% filter(Frequency > 5) #keep only bacteria with a frequency greater than 5.
+HEV_Bac_Freq3 <- Bac_EVE_sig %>% filter(Frequency > 3) #keep only bacteria with a frequency greater than 3. 
+
+hist(Bac_EVE_sig$Frequency,freq = F)
+
+# Plot the chi-squared distribution with one degree of freedom
+x = seq(0.2,10,length.out = 100)
+y = dchisq(x,df = 1)
+lines(x,y,col="red")
+
+# I was curious how frequent highly variable bacteria were, some may be only present in a few samples, these may not be as biologically relevant to you, or they may be the focus of your investigation depending on your questions. For me, I was most curious about the lineage-specific bacteria and phylosymbiotic bacteria.
+```
+
+
 ### Box and Whisker Plots - Individual. 
 ```{r}
 library(ggplot2)
@@ -549,8 +491,9 @@ Anova(model <- glm(nautella.italica~Status, data = bacteria_results))
 TukeyHSD(aov(model))
 
 
-#avg.EVE_RR <- bacteria_results[,c(5:273)] %>% group_by(RelativeRisk) %>% summarise_all(list(mean))#this wasnt working so i read in a previous version of the file. 
-avg.EV_RR <- read.csv("avg.EV_RR.csv")
+avg.EVE_RR <- bacteria_results[,c(5:273)] %>% group_by(RelativeRisk) %>% summarise_all(list(mean))
+#or
+#avg.EV_RR <- read.csv("avg.EV_RR.csv")
 
 cor.test(avg.EV_RR$endozoicomonas.spp,avg.EV_RR$RelativeRisk, method=c("pearson"))
 
@@ -673,10 +616,8 @@ ggsave("pseudoalteromonas.spp_statusLine.pdf")
 ### Box and Whisker Construction - For Loop
 ```{r}
 # For Loop to create multiple bar graphs (of the same format) from a single csv file
-# Written by AY for NM
-# Date: 2/22/22
 
-#### Background info from NM for AY ####
+#### Background info ####
 
 # Desired boxplot figure output:
 #   x-axis: coral species
@@ -711,7 +652,7 @@ endozoicomonas.spp_species <- ggplot(data = bacteria_results,
         strip.text.x = element_text(colour = "black", size = 20))
 endozoicomonas.spp_species 
 
-#### Original AY code for NM ####
+#### Original code  ####
 
 # For loop prerequites (for this loop, not all loops):
 #   1. All figures created should have the same format OR 
@@ -911,30 +852,18 @@ Phylosymbiotic_Bacteria <- merge(Phylosymbiotic_Bacteria, sig_bacteria, by="Bact
 write.csv(Phylosymbiotic_Bacteria, file="Phylosymbiotic Bacteria.csv")
 
 
-#Results: 9/33 LS bacteria are phylosymbiotic. They are ALL more highly expressed in ppor, past, and ssid. 
-
-#Discussion: ppor, past, ssid possess phylosymbiotic relationship with bacteria that are associated with overall microbial community change. This suggests the other species utilize other aspects of the holobiont to mediate microbial change. 
-
-#None of the phylosymbionts are correlated to Relative Risk of Disease incidence. This suggests evolved microbial symbiosis is not associated with holobiont disease incidence. 
 ```
 
 ### Phylosymbiotic Bacteria Correlated to Dysbiosis
 ```{r}
 #A phylosymbiotic bacteria is hypothesized to contribute beneficial and stabilizing functions to the coral host/microbiome. 
 # We can explore this by using DYSBIOSIS metrics as a proxy for STABILITY. 
-# We can also explore BENEFICIAL contributions by assessing WCGNA modules. 
-# I am also curious if some coral species do not have phylosymbiotic bacteria. This could be represented by low abundance in any bacteria marked as phylosymbiotic. I suspect Orbicella and Montastraea species to have less phylosymbiotic bacteria - holobiont resistance mediated by host. Perhaps Cnat too - holobiont resistance mediated by symbionts. So that leaves Porites and Siderastraea expected to have higher abdundance of phylosymbiotic bacteria. 
+# I am also curious if some coral species do not have phylosymbiotic bacteria. This could be represented by low abundance in any bacteria marked as phylosymbiotic.
+
 Phylosymbiotic_Bacteria <- read.csv("Phylosymbiotic Bacteria.csv")
 
 avg.EV_RR <- read.csv("avg.EV_RR.csv") #avg.EVE_RR <- bacteria_results[,c(5:273)] %>% group_by(RelativeRisk) %>% summarise_all(list(mean))#this wasnt working so i read in a previous version of the file. 
 avg.EV_RR_NA <- read.csv("avg.EV_RR_NA.csv") # Removed Dybsiosis metric for Mcav in Dysbiosis C2I ( no mcav were infected) and for ofav in DysbiosisC2E (no ofav survived exposure)
-
-# 0/33  Significant to Relative Risk
-# 31/33 Significant to DysbiosisC2I
-# 9/33  Significant to DysbiosisC2I in avg.EV_RR_NA
-# 0/33  Significant to DysbiosisC2E
-
-#If the Dysbiosis metric for Mcav and Ofav is removed for the respective disease outcomes where the species does not have a value, then Dysbsiosis C2I becomes less signifcnatly correlated to the phylosymbioitc bacteria, in nearly all cases 0.05<pval<0.1.
 
 #tetracoccus.cechii
 cor.test(avg.EV_RR$tetracoccus.cechii,avg.EV_RR$RelativeRisk, method=c("pearson")) #p-value = 0.2954
@@ -1325,7 +1254,7 @@ Phylosymbiotic_Bacteria$Bacteria <-  trimws(Phylosymbiotic_Bacteria$Bacteria, wh
 phylosymbiotic_network <- merge(network, Phylosymbiotic_Bacteria, by="Bacteria")
 write.csv(phylosymbiotic_network, file="phylosymbiotic_network.csv")
 
-#Results: 10 Phylosymbioitc Bacteria are in Joe's Networks.
+
 ```
 ### Correlation to RR and Dybsiosis - For Loop - Figure 3, Supp Data 2
 ```{r}
@@ -1388,10 +1317,8 @@ write.csv(all_outputs, file="EVE Bacteria Correlated to RR and Dysbiosis.csv")
 ### Box and Whisker Construction Individual - For Loop
 ```{r}
 # For Loop to create multiple bar graphs (of the same format) from a single csv file
-# Written by AY for NM
-# Date: 2/22/22
 
-#### Background info from NM for AY ####
+#### Background info ####
 
 # Desired boxplot figure output:
 #   x-axis: coral species
@@ -1426,7 +1353,7 @@ endozoicomonas.spp_species <- ggplot(data = bacteria_results,
         strip.text.x = element_text(colour = "black", size = 20))
 endozoicomonas.spp_species 
 
-#### Original AY code for NM ####
+#### Original code  ####
 
 # For loop prerequites (for this loop, not all loops):
 #   1. All figures created should have the same format OR 
@@ -1582,10 +1509,8 @@ plot <-  ggscatter(data, x = RelativeRisk, y = bellili,
 ### Correlation Graphs - For Loop
 ```{r}
 # For Loop to create multiple bar graphs (of the same format) from a single csv file
-# Written by AY for NM
-# Date: 2/22/22
 
-#### Background info from NM for AY ####
+#### Background info ####
 
 # Desired boxplot figure output:
 #   x-axis: coral species
@@ -1613,7 +1538,7 @@ ggscatter(my_data, x = "mpg", y = "wt",
           xlab = "Miles/(US) gallon", ylab = "Weight (1000 lbs)")
 
 
-#### Original AY code for NM ####
+#### Original code ####
 
 # For loop prerequites (for this loop, not all loops):
 #   1. All figures created should have the same format OR 
@@ -1742,10 +1667,8 @@ for (i in 1:length(bacteria_names_keep)){ #iterates loop over each column of bac
 ### Combining Box and Whisker and Correlation Graphs - For Loop - Incomplete
 ```{r}
 # For Loop to create multiple bar graphs (of the same format) from a single csv file
-# Written by AY for NM
-# Date: 2/22/22
 
-#### Background info from NM for AY ####
+#### Background info ####
 
 # Desired boxplot figure output:
 #   x-axis: coral species
@@ -1773,7 +1696,7 @@ ggscatter(my_data, x = "mpg", y = "wt",
           xlab = "Miles/(US) gallon", ylab = "Weight (1000 lbs)")
 
 
-#### Original AY code for NM ####
+#### Original code ####
 
 # For loop prerequites (for this loop, not all loops):
 #   1. All figures created should have the same format OR 
@@ -2233,7 +2156,7 @@ plot <- ggplot(data = output, aes(x = reorder(Specified, (RelativeRisk)), y = Ab
 
 ### Signficant Abundance Differences of LS/PS Bacteria in Controls associated with Treatment Outcome
 ```{r}
-QUESTION: Within a species - such as Porites astreoides - which PS/LS bacteria had the most difference in abundance between the controls who got infected vs controls who remained healthy. 
+QUESTION: Within a species - such as Porites astreoides - which PS/LS bacteria had the most difference in abundance between the controls whos genotypic pair got infected in disease treament vs controls whose genotypic pair in disease treatment remained healthy. Basically, we can see what is unique in disease naive samples whose genotypic fate is either resistant or susceptible.
 -This will show which bacteria are present in resistant fragments and which bacteria are present in susceptible fragments. 
 
 Steps:
@@ -2751,9 +2674,7 @@ require(stringr) # for string manipulation
 require(dplyr) # for dataframe manipulation
 require(ggplot2) # for plotting
 
-# For Loop to create multiple bar graphs (of the same format) from a single csv file
-# Written NM
-# Date: 4/3/22
+# For Loop to create multiple bar graphs (of the same format) from a single csv fil
 
 #### Background info ####
 
