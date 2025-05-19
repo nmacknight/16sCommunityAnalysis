@@ -125,11 +125,187 @@ y = dchisq(x,df = 1)
 lines(x,y,col="red")
 ```
 
-### PCA - Figure 1B, 1C
+P-value can then be calculated using:
+
+```{r}
+pval = pchisq(res$LRT,df = 1,lower.tail = F)
+```
+
+### Result: fitted parameters
+
+The shared beta:
+
+```{r}
+res$sharedBeta
+```
+
+The parameters for each gene given shared beta:
+
+```{r}
+head(res$sharedBetaRes$par)
+```
+
+The parameters for each gene given individual beta:
+
+```{r}
+head(res$indivBetaRes$par)
+```
+
+Note that, with the exception of theta, the fitted parameters are rather unstable
+
+Combine LRT, beta, theta, sigma2, alpha:
+```{r}
+head(cbind(res$LRT,res$indivBetaRes$par,pval))
+a <- cbind(res$LRT,res$indivBetaRes$par,pval,bacteriaMat[,1:68])
+#genes
+rownames(a) <- exprTbl$Entry
+#bacteria
+rownames(a) <- rownames(bacteriaMat)
+```
+
+Give Column Name to LRT column
+
+```{r}
+colnames(a)
+colnames(a)[colnames(a)==""] <- "LRT"
+head(a)
+```
+
+Export results
+
+```{r}
+write.csv(a, file="R_EVE_results_WP_bacteria_7species.csv")
+```
+
+Visualize LRT v Beta by volcano plot for gene data
+```{r}
+Bac_EVE <- read.csv("R_EVE_results_WP_bacteria_7species.csv")
+colnames(Bac_EVE)
+colnames(Shared_EVE)[colnames(Shared_EVE)=="X"] <- "Entry"
+head(Bac_EVE)
+
+library(tidyverse)
+Bac_EVE_sig <- Bac_EVE %>% filter(pval <= 0.1)
+write.csv(Bac_EVE_sig, file="Signficant EVE Bacteria.csv")
+
+# Make a basic volcano plot
+with(Bac_EVE, plot(log(beta),LRT, pch=20, main="EVE", xlim=c(-5,5),ylim=c(-1,110)))
+
+# Add colored points: red if padj<0.05, orange of log2FC>1, green if both)
+with(subset(Bac_EVE, LRT>3.4), points(log(beta), LRT, pch=20, col="mediumpurple1"))
+with(subset(Bac_EVE, LRT<3.4 & abs(log(beta))>1.5), points(log(beta), LRT, pch=20, col="pink1"))
+
+# Label points with the textxy function from the calibrate plot
+library(calibrate)
+with(subset(Bac_EVE_sig, LRT>20 & abs(log(beta))>0), textxy(log(beta), LRT, labs=Bacteria, cex=0.7, offset=0.6))
+with(subset(Bac_EVE_sig, LRT<5 & abs(log(beta))>2), textxy(log(beta), LRT, labs=Bacteria, cex=0.7, offset=0.6))
+```
+
+### Isolating Lineage Specific "LS" and Highly Variable "HV" Bacteria using the sharedbeta metric.
+```{r,results='hide',tidy=TRUE}
+# P-value can then be calculated using:
+pval = pchisq(res$LRT,df = 1,lower.tail = F)
+
+# The shared beta:
+res$sharedBeta
+4.687645
+
+log(4.687645)
+
+#Combine LRT, beta, theta, sigma2, alpha:
+head(cbind(res$LRT,res$indivBetaEVE$par,pval))
+colnames(bacteriaMat)
+dim(bacteriaMat)
+# [1]  371   76
+a <- cbind(res$LRT,res$indivBetaRes$par,pval,bacteriaMat)
+#rownames(a) <- NodesignTbl.t$Orthogroup
+
+# Give Column Name to LRT column
+colnames(a)
+colnames(a)[colnames(a)==""] <- "LRT"
+head(a)
+EVE_results <- as.data.frame(a)
+EVE_results <- tibble::rownames_to_column(EVE_results, "Orthogroup")
+
+EVE_results$type <- ifelse(EVE_results$beta<log(res$sharedBeta),"Lineage Specific","Highly Variable")
+EVE_results$significant <- ifelse(EVE_results$pval<=0.1,"Significant","Not Significant")
+EVE_results$category <- ifelse(EVE_results$significant == "Significant",EVE_results$type,"NS")
+colnames(EVE_results)
+EVE_results <- EVE_results %>% relocate(type, .after = pval)
+EVE_results <- EVE_results %>% relocate(significant, .after = type)
+EVE_results <- EVE_results %>% relocate(category, .after = significant)
+
+Shared_EVE <- EVE_results
+Shared_EVE_sig <- Shared_EVE %>% filter(pval <= 0.1)
+Shared_EVE_LS <- Shared_EVE_sig %>% filter(log(beta)< (log(res$sharedBeta)))
+dim(Shared_EVE_LS)  #108
+Shared_EVE_HV <- Shared_EVE_sig %>% filter(log(beta)> (log(res$sharedBeta)))
+dim(Shared_EVE_HV)  #160
+
+```
+
+# Figure Creation
+
+### Volcano Plot - Figure 1A, Supp Data 1
+```{r EVE_volcano,fig.height=3,fig.width=3,dpi=300}
+p <- ggplot(data = Shared_EVE,
+       aes(x=log(beta),y=LRT,color=category))+
+  geom_point()+
+  geom_vline(xintercept = log(res$sharedBeta), col="black", linetype="dashed")+
+  annotate("text", x = 3, y = -4, label = "Shared beta", size = 3)+
+  geom_hline(yintercept = -log(0.1), col="black",linetype = "dashed")+
+  annotate("text", x = -2, y = 4.5, label = "p = 0.1", size = 3)+
+  scale_color_manual(values=c("pink1","mediumpurple1","black"))+
+  #xlim(-5,5)+
+  theme_light()
+p + labs(color = "EVE Gene Category",title = "EVE Genes Volcano Plot",subtitle = "108 Lineage-Specific and 160 Highly Variable Genes") +
+  theme(plot.title = element_text(face = "bold"), plot.subtitle = element_text(size = 9))
+
+
+
+
+p <- ggplot() +
+  # First, plot black dots (NS) in the background
+  geom_point(data = Shared_EVE %>% filter(category == "NS"), 
+             aes(x = log(beta), y = LRT), 
+             color = "black", alpha = 0.6, size = 1.5) +
+  
+  # Then, plot purple dots (Lineage Specific) in the middle layer
+  geom_point(data = Shared_EVE %>% filter(category == "Lineage Specific"), 
+             aes(x = log(beta), y = LRT), 
+             color = "mediumpurple1", alpha = 0.8, size = 1.8) +
+  
+  # Finally, plot pink dots (Highly Variable) on top so they are most visible
+  geom_point(data = Shared_EVE %>% filter(category == "Highly Variable"), 
+             aes(x = log(beta), y = LRT), 
+             color = "pink1", size = 2) +
+
+  # Add dashed lines for significance and shared beta
+  geom_vline(xintercept = log(res$sharedBeta), col="black", linetype="dashed") +
+  annotate("text", x = 3, y = -4, label = "Shared beta", size = 3) +
+  geom_hline(yintercept = -log(0.1), col="black", linetype="dashed") +
+  annotate("text", x = -2, y = 4.5, label = "p = 0.1", size = 3) +
+
+  # Customize color legend manually
+  scale_color_manual(values=c("pink1", "mediumpurple1", "black")) +
+
+  # Apply theme and labels
+  theme_light() +
+  labs(color = "EVE Gene Category", 
+       title = "EVE Genes Volcano Plot",
+       subtitle = "108 Lineage-Specific and 160 Highly Variable Genes") +
+  theme(plot.title = element_text(face = "bold"), 
+        plot.subtitle = element_text(size = 9))
+
+p  # Display the plot
+
+```
+
+### PCA of LS and HV Bacteria
 ```{r}
 
-# Isolate LRT and HEV Bacteria
-sig_LS_Bac <- Bac_EVE_sig[Bac_EVE_sig$LRT > res$sharedbeta, ] 
+# LS
+sig_LS_Bac <- Shared_EVE_LS
 
 sig_LS_Bac <- t((sig_LS_Bac[,c(1,12:length(sig_LS_Bac))]))
 
@@ -142,8 +318,8 @@ sig_LS_Bac_meta <- merge(metadata,sig_LS_Bac., by="SampleID")
 write.csv(sig_LS_Bac_meta, file="path/sig_LS_Bac_meta.csv") # converted to numeric. 
 sig_LS_Bac_meta <- read.csv("path/sig_LS_Bac_meta.csv")
 
-
-sig_HEV_Bac <- Bac_EVE_sig[Bac_EVE_sig$LRT < res$sharedbeta, ]
+# HV
+sig_HEV_Bac <- Shared_EVE_HV
 
 sig_HEV_Bac <- t((sig_HEV_Bac[,c(1,12:length(sig_HEV_Bac))]))
 
@@ -168,7 +344,7 @@ LSPCA <- LSPCA + theme(legend.position="bottom")+
                             values=c("orangered3", "indianred2", "cornflowerblue", "skyblue2", "mediumseagreen", "springgreen4", "green4"))
 LSPCA
 
-#Lineage-Specific
+#Phylosymbiotic
 Phylosymbiotic_Bacteria_Transposed <- read.csv("Phylosymbiotic Bacteria_Transposed.csv")
 PS_PCA_input <- Phylosymbiotic_Bacteria_Transposed[,11:43]
 pca_res_PS <- prcomp(PS_PCA_input, scale. = TRUE)
@@ -202,33 +378,7 @@ Results: LSPCA separates by species, organized by phylogeny as expected. Porites
 Discussion: The takeaway from HEVPCA is that the species cluster on top of each other as expected showing low host influence.
 ```
 
-# Figure Creation
 
-### Volcano Plot - Figure 1A, Supp Data 1
-```{r}
-Bac_EVE <- read.csv("R_EVE_results_WP_bacteria_7species.csv")
-
-colnames(Bac_EVE)
-colnames(Shared_EVE)[colnames(Shared_EVE)=="X"] <- "Entry"
-#res <- read.table("siderea_volcano.txt", header=TRUE) #previously did this
-head(Bac_EVE)
-
-library(tidyverse)
-Bac_EVE_sig <- Bac_EVE %>% filter(pval <= 0.1)
-write.csv(Bac_EVE_sig, file="Signficant EVE Bacteria.csv")
-
-# Make a basic volcano plot
-
-with(Bac_EVE, plot(log(beta),LRT, pch=20, main="EVE", xlim=c(-5,5),ylim=c(-1,110)))
-
-# Add colored points: red if padj<0.05, orange of log2FC>1, green if both)
-with(subset(Bac_EVE, LRT>3.4), points(log(beta), LRT, pch=20, col="mediumpurple1"))
-with(subset(Bac_EVE, (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="pink1"))
-with(subset(Bac_EVE, LRT>3.4 & (log(beta))>1.54493), points(log(beta), LRT, pch=20, col="slateblue3"))
-
-# Results: There are 268 EVE bacteria. 108 of them are Lineage specific, the other 160 are Highly Variable.
-
-```
 ### Histogram - Supp Fig 1
 ```{r}
 
