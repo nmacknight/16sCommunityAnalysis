@@ -37,7 +37,7 @@ library(evemodel)
 
 ### Input data
 
->Describe what Bacteria_EVE_input.txt looks like
+> File "Bacteria_EVE_input.txt" is a count matrix of bacteria abundances with rows as bacteria IDs and columns as sample IDs.
 
 ```{r}
 # White Plague Microbiome. read tab separated table
